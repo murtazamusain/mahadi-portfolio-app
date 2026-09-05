@@ -1,25 +1,15 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import InvoiceFormV2 from '@/components/InvoiceFormV2';
 
-// 🆕 ডায়নামিক ইমপোর্ট (SSR অফ)
-const InvoiceFormV2Dynamic = dynamic(
-  () => import('@/components/InvoiceFormV2'),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="text-[#94A3B8] text-center py-20">Loading...</div>
-    ),
-  },
-);
-
-function InvoiceContent() {
+export default function NewInvoicePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [initialData, setInitialData] = useState(null);
 
   useEffect(() => {
     const cookies = document.cookie.split(';').reduce((acc, cookie) => {
@@ -33,8 +23,20 @@ function InvoiceContent() {
     } else {
       router.push('/login');
     }
+
+    // 🆕 URL থেকে ডেটা পড়া (Convert to Invoice থেকে আসা)
+    const dataParam = searchParams.get('data');
+    if (dataParam) {
+      try {
+        const decoded = JSON.parse(decodeURIComponent(dataParam));
+        setInitialData(decoded);
+      } catch (e) {
+        console.error('Invalid invoice data:', e);
+      }
+    }
+
     setLoading(false);
-  }, [router]);
+  }, [router, searchParams]);
 
   if (loading) {
     return (
@@ -54,11 +56,13 @@ function InvoiceContent() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-white">
-              📄 Create New Invoice
+              {initialData ? '📄 Converted Invoice' : '📄 Create New Invoice'}
             </h1>
-            <p className="text-[#94A3B8] text-sm">
-              French professional invoice format
-            </p>
+            {initialData && (
+              <p className="text-[#94A3B8] text-sm">
+                From estimate - review and save
+              </p>
+            )}
           </div>
           <button
             onClick={() => router.push('/invoices')}
@@ -80,22 +84,11 @@ function InvoiceContent() {
             Back to Directory
           </button>
         </div>
-        <InvoiceFormV2Dynamic onSave={() => router.push('/invoices')} />
+        <InvoiceFormV2
+          initialData={initialData}
+          onSave={() => router.push('/invoices')}
+        />
       </div>
     </div>
-  );
-}
-
-export default function NewInvoicePage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-[#0F172A] flex items-center justify-center text-[#94A3B8]">
-          Loading...
-        </div>
-      }
-    >
-      <InvoiceContent />
-    </Suspense>
   );
 }

@@ -15,6 +15,7 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
     clientAddress: '',
     clientSiret: '',
     paymentMethod: 'Virement',
+    taxRate: 10, // 🆕 ট্যাক্স রেট এডিটেবল
     items: [{ id: 1, description: '', quantity: 1, price: 0, discount: 0 }],
   });
 
@@ -33,18 +34,33 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // অটো ইনভয়েস নম্বর
+  // অটো ইনভয়েস নম্বর + initialData লোড
   useEffect(() => {
-    if (!initialData) {
-      const generateInvoiceNumber = () => {
-        const year = new Date().getFullYear();
-        const random = Math.floor(Math.random() * 1000)
-          .toString()
-          .padStart(3, '0');
-        return `MHINV${year}${random}`;
-      };
-      setFormData(prev => ({ ...prev, invoiceNo: generateInvoiceNumber() }));
-    } else {
+    if (initialData) {
+      // 🆕 items পার্সিং - যদি স্ট্রিং হয় তাহলে JSON.parse, না হলে সরাসরি ব্যবহার
+      let parsedItems = [];
+      if (initialData.items) {
+        if (typeof initialData.items === 'string') {
+          try {
+            parsedItems = JSON.parse(initialData.items);
+          } catch (e) {
+            parsedItems = [
+              { id: 1, description: '', quantity: 1, price: 0, discount: 0 },
+            ];
+          }
+        } else if (Array.isArray(initialData.items)) {
+          parsedItems = initialData.items;
+        } else {
+          parsedItems = [
+            { id: 1, description: '', quantity: 1, price: 0, discount: 0 },
+          ];
+        }
+      } else {
+        parsedItems = [
+          { id: 1, description: '', quantity: 1, price: 0, discount: 0 },
+        ];
+      }
+
       setFormData({
         invoiceNo: initialData.invoiceNo || '',
         date: initialData.date || new Date().toISOString().split('T')[0],
@@ -57,10 +73,22 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
         clientAddress: initialData.clientAddress || '',
         clientSiret: initialData.clientSiret || '',
         paymentMethod: initialData.paymentMethod || 'Virement',
-        items: initialData.items
-          ? JSON.parse(initialData.items)
-          : [{ id: 1, description: '', quantity: 1, price: 0, discount: 0 }],
+        taxRate: parseFloat(initialData.taxRate) || 10,
+        items: parsedItems,
       });
+    } else {
+      const generateInvoiceNumber = () => {
+        const year = new Date().getFullYear();
+        const random = Math.floor(Math.random() * 1000)
+          .toString()
+          .padStart(3, '0');
+        return `MHINV${year}${random}`;
+      };
+      setFormData(prev => ({
+        ...prev,
+        invoiceNo: generateInvoiceNumber(),
+        taxRate: 10,
+      }));
     }
   }, [initialData]);
 
@@ -119,7 +147,8 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
       const discount = parseFloat(item.discount) || 0;
       totalHT += qty * price * (1 - discount / 100);
     });
-    const tva = totalHT * 0.1;
+    const taxRate = parseFloat(formData.taxRate) || 0;
+    const tva = totalHT * (taxRate / 100);
     const totalTTC = totalHT + tva;
     return { totalHT, tva, totalTTC };
   };
@@ -141,6 +170,7 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
       date: formData.date,
       dueDate: formData.dueDate,
       paymentMethod: formData.paymentMethod,
+      taxRate: formData.taxRate, // 🆕 ট্যাক্স রেট পাঠানো
       items: JSON.stringify(formData.items),
       totalHT: totals.totalHT.toFixed(2),
       tva: totals.tva.toFixed(2),
@@ -177,7 +207,6 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
         <h2 className="text-base sm:text-lg md:text-xl font-bold text-white">
           {isEditing ? '✏️ Edit Invoice' : '📄 Create French Invoice'}
         </h2>
-        {/* 🆕 মোবাইলে Preview বাটন বন্ধ, ডেস্কটপে Full Preview */}
         {!isMobile && (
           <button
             type="button"
@@ -570,7 +599,7 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
               </span>
             </div>
             <div className="flex justify-between border-b border-[#2D3B4E] py-1 sm:py-2">
-              <span className="text-[#94A3B8]">TVA (10%)</span>
+              <span className="text-[#94A3B8]">TVA ({formData.taxRate}%)</span>
               <span className="text-white font-mono">
                 {totals.tva.toFixed(2)} €
               </span>
@@ -586,6 +615,24 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
               <span className="text-[#10B981]">
                 {totals.totalTTC.toFixed(2)} €
               </span>
+            </div>
+            {/* 🆕 ট্যাক্স রেট এডিট */}
+            <div className="flex justify-between items-center border-t border-[#2D3B4E] pt-2 mt-2">
+              <span className="text-[#94A3B8] text-xs">Tax Rate (%)</span>
+              <input
+                type="number"
+                value={formData.taxRate}
+                onChange={e =>
+                  setFormData({
+                    ...formData,
+                    taxRate: parseFloat(e.target.value) || 0,
+                  })
+                }
+                className="w-20 bg-[#0F172A] border border-[#2D3B4E] rounded-lg px-2 py-1 text-white text-sm text-center focus:outline-none focus:border-[#3B82F6] transition"
+                min="0"
+                max="100"
+                step="0.5"
+              />
             </div>
           </div>
         </div>
@@ -633,7 +680,7 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
         )}
       </form>
 
-      {/* ডেস্কটপের জন্য PDF Preview Modal */}
+      {/* PDF Preview Modal */}
       {showPreview && !isMobile && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className="bg-[#1E293B] rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-[#2D3B4E]">

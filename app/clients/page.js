@@ -13,6 +13,7 @@ export default function ClientsPage() {
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [heroTitle, setHeroTitle] = useState('Mahadi Hasan');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -45,6 +46,27 @@ export default function ClientsPage() {
       setLoading(false);
     }
   };
+
+  // 🆕 হিরো টাইটেল লোড
+  useEffect(() => {
+    const loadHeroTitle = async () => {
+      try {
+        const res = await fetch('/api/content');
+        const data = await res.json();
+        if (data.success) {
+          const rows = data.data || [];
+          const contentObj = {};
+          rows.slice(1).forEach(row => {
+            if (row[1]) contentObj[row[1]] = row[2] || '';
+          });
+          if (contentObj.hero_title) {
+            setHeroTitle(contentObj.hero_title);
+          }
+        }
+      } catch (e) {}
+    };
+    loadHeroTitle();
+  }, []);
 
   useEffect(() => {
     const cookies = document.cookie.split(';').reduce((acc, cookie) => {
@@ -170,6 +192,12 @@ export default function ClientsPage() {
     });
   };
 
+  // 🆕 ডায়নামিক WhatsApp মেসেজ (ক্লায়েন্টের নামে শুরু, হিরো টাইটেল ভিতরে)
+  const getWhatsAppMessage = (clientName, clientEmail, clientPhone) => {
+    const myName = heroTitle || 'Mahadi Hasan';
+    return `Hello ${clientName}, this is ${myName}. I offer professional driving services in France. If you need any transfer, tour, or airport service, feel free to let me know. I'm available 24/7. Thank you!`;
+  };
+
   const getWhatsAppLink = (phone, name, email) => {
     if (!phone) return '#';
     let cleanPhone = phone.replace(/[^0-9+]/g, '');
@@ -180,10 +208,21 @@ export default function ClientsPage() {
         cleanPhone = '+88' + cleanPhone;
       }
     }
-    const message = encodeURIComponent(
-      `Hello Mahadi, I'm ${name} (${email}). I need a quote.`,
-    );
+    const message = encodeURIComponent(getWhatsAppMessage(name, email, phone));
     return `https://wa.me/${cleanPhone}?text=${message}`;
+  };
+
+  // Send Quote - ক্লায়েন্ট ডেটা নিয়ে Estimate পেজে
+  const handleSendQuote = client => {
+    const clientData = {
+      name: client.name,
+      email: client.email,
+      phone: client.phone || '',
+      address: client.address || '',
+    };
+    router.push(
+      `/estimate?client=${encodeURIComponent(JSON.stringify(clientData))}`,
+    );
   };
 
   const filteredClients = clients.filter(
@@ -198,7 +237,7 @@ export default function ClientsPage() {
   return (
     <div className="min-h-screen bg-[#0F172A] py-6 md:py-10">
       <div className="container mx-auto px-4">
-        {/* Header - টাইটেলের পাশে নাম্বার */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl md:text-3xl font-bold text-white">
@@ -512,11 +551,7 @@ export default function ClientsPage() {
 
                   <div className="flex gap-2 mt-4 pt-3 border-t border-[#2D3B4E]">
                     <button
-                      onClick={() =>
-                        router.push(
-                          `/estimates?client=${encodeURIComponent(JSON.stringify(client))}`,
-                        )
-                      }
+                      onClick={() => handleSendQuote(client)}
                       className="flex-1 bg-[#3B82F6] text-white px-3 py-1.5 rounded-xl hover:bg-[#2563EB] transition text-sm text-center"
                     >
                       📝 Send Quote

@@ -42,13 +42,12 @@ export default function EditEstimatePage() {
       const data = await res.json();
       if (data.success) {
         const est = data.data;
-        console.log('Estimate data:', est); // ডিবাগিং
+        console.log('Estimate data:', est);
 
         // items পার্স করা
         let parsedItems = [];
         if (est.items) {
           try {
-            // যদি est.items একটি স্ট্রিং হয়, তাহলে JSON.parse করব
             if (typeof est.items === 'string') {
               parsedItems = JSON.parse(est.items);
             } else if (Array.isArray(est.items)) {
@@ -205,6 +204,53 @@ export default function EditEstimatePage() {
     setSaving(false);
   };
 
+  // 🆕 Convert to Invoice - ইনভয়েস ফর্মে লোড হবে
+  const handleConvertToInvoice = () => {
+    if (!formData) return;
+    if (!formData.clientName.trim()) {
+      setMessage('❌ Client name is required!');
+      return;
+    }
+    const hasItem = formData.items.some(
+      item => item.description.trim() && item.price > 0,
+    );
+    if (!hasItem) {
+      setMessage('❌ At least one valid item is required!');
+      return;
+    }
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const random = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, '0');
+    const invoiceNo = `MHINV${year}${random}`;
+
+    // ইনভয়েস ফর্মে পাঠানোর জন্য ডেটা তৈরি
+    const invoiceData = {
+      invoiceNo: invoiceNo,
+      clientName: formData.clientName,
+      clientAddress: formData.clientAddress || '',
+      clientSiret: '',
+      date: formData.date,
+      dueDate:
+        formData.validUntil ||
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
+      paymentMethod: 'Virement',
+      items: formData.items,
+      taxRate: formData.taxRate,
+      totalHT: totals.subtotal.toFixed(2),
+      tva: totals.taxAmount.toFixed(2),
+      totalTTC: totals.total.toFixed(2),
+      status: 'Pending',
+    };
+
+    const encodedData = encodeURIComponent(JSON.stringify(invoiceData));
+    router.push(`/invoice?data=${encodedData}`);
+  };
+
   if (loading) return <LoadingSpinner message="Loading estimate..." />;
   if (!formData)
     return (
@@ -223,13 +269,13 @@ export default function EditEstimatePage() {
             </h1>
             <p className="text-[#94A3B8] text-sm">#{formData.estimateNo}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button
               type="button"
               onClick={() => setShowPreview(!showPreview)}
               className="px-4 py-2 rounded-xl bg-[#3B82F6] text-white hover:bg-[#2563EB] transition text-sm"
             >
-              {showPreview ? '✕ Close Preview' : '👁️ Preview PDF'}
+              {showPreview ? '✕ Close' : '👁️ Preview'}
             </button>
             <button
               onClick={() => router.push('/estimates')}
@@ -357,9 +403,7 @@ export default function EditEstimatePage() {
           {/* Items */}
           <div className="bg-[#1E293B] p-6 rounded-2xl border border-[#2D3B4E]">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">
-                🛒 Items / Services
-              </h3>
+              <h3 className="text-lg font-semibold text-white">🛒 Items</h3>
               <button
                 type="button"
                 onClick={addItem}
@@ -572,10 +616,11 @@ export default function EditEstimatePage() {
 
             <button
               type="button"
-              onClick={() => router.push('/invoices')}
-              className="px-8 py-3.5 rounded-xl bg-[#1E293B] text-[#94A3B8] hover:bg-[#2D3B4E] hover:text-white transition"
+              onClick={handleConvertToInvoice}
+              disabled={saving}
+              className="px-8 py-3.5 rounded-xl bg-[#F59E0B] text-white font-semibold hover:bg-[#D97706] transition shadow-lg shadow-yellow-500/25"
             >
-              Convert to Invoice
+              🔄 Convert to Invoice
             </button>
           </div>
         </form>

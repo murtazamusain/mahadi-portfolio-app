@@ -11,7 +11,7 @@ export async function GET(request, { params }) {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: 'Estimates!A1:N',
+      range: 'Estimates!A1:O',
     });
 
     const rows = response.data.values || [];
@@ -38,6 +38,7 @@ export async function GET(request, { params }) {
       notes: estimateRow[11] || '',
       terms: estimateRow[12] || '',
       status: estimateRow[13] || 'Draft',
+      taxRate: estimateRow[14] || '10', // 🆕 taxRate
     };
 
     return NextResponse.json({ success: true, data: estimate });
@@ -60,7 +61,7 @@ export async function PUT(request, { params }) {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: 'Estimates!A1:N',
+      range: 'Estimates!A1:O',
     });
 
     const rows = response.data.values || [];
@@ -87,11 +88,12 @@ export async function PUT(request, { params }) {
       data.notes || '',
       data.terms || '',
       data.status || 'Draft',
+      data.taxRate || '10',
     ];
 
     await sheets.spreadsheets.values.update({
       spreadsheetId: sheetId,
-      range: `Estimates!A${rowIndex + 1}:N${rowIndex + 1}`,
+      range: `Estimates!A${rowIndex + 1}:O${rowIndex + 1}`,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [updatedRow] },
     });
@@ -115,7 +117,7 @@ export async function DELETE(request, { params }) {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: 'Estimates!A1:N',
+      range: 'Estimates!A1:O',
     });
 
     const rows = response.data.values || [];
@@ -129,7 +131,7 @@ export async function DELETE(request, { params }) {
 
     await sheets.spreadsheets.values.clear({
       spreadsheetId: sheetId,
-      range: `Estimates!A${rowIndex + 1}:N${rowIndex + 1}`,
+      range: `Estimates!A${rowIndex + 1}:O${rowIndex + 1}`,
     });
 
     return NextResponse.json({ success: true });
