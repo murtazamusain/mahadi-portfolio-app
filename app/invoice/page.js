@@ -1,43 +1,45 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import InvoiceFormV2 from '@/components/InvoiceFormV2';
 
-export default function NewInvoicePage() {
+// 🆕 ডায়নামিক ইমপোর্ট (SSR অফ)
+const InvoiceFormV2Dynamic = dynamic(
+  () => import('@/components/InvoiceFormV2'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="text-[#94A3B8] text-center py-20">Loading...</div>
+    ),
+  },
+);
+
+function InvoiceContent() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = () => {
-      const cookies = document.cookie.split(';').reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split('=');
-        acc[key] = value;
-        return acc;
-      }, {});
-      const isAuth = cookies.invoice_auth === 'true';
-      setIsAuthenticated(isAuth);
-      if (!isAuth) {
-        router.push('/login');
-      }
-      setLoading(false);
-    };
+    const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split('=');
+      acc[key] = value;
+      return acc;
+    }, {});
 
-    checkAuth();
-
-    // লগইন স্টেট চেঞ্জ হলে রি-চেক
-    const handleAuthChange = () => {
-      checkAuth();
-    };
-    window.addEventListener('auth-change', handleAuthChange);
-    return () => window.removeEventListener('auth-change', handleAuthChange);
+    if (cookies.invoice_auth === 'true') {
+      setIsAuthenticated(true);
+    } else {
+      router.push('/login');
+    }
+    setLoading(false);
   }, [router]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0F172A]">
-        <div className="text-[#94A3B8]">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-[#0F172A] text-[#94A3B8]">
+        Loading...
       </div>
     );
   }
@@ -78,8 +80,22 @@ export default function NewInvoicePage() {
             Back to Directory
           </button>
         </div>
-        <InvoiceFormV2 onSave={() => router.push('/invoices')} />
+        <InvoiceFormV2Dynamic onSave={() => router.push('/invoices')} />
       </div>
     </div>
+  );
+}
+
+export default function NewInvoicePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0F172A] flex items-center justify-center text-[#94A3B8]">
+          Loading...
+        </div>
+      }
+    >
+      <InvoiceContent />
+    </Suspense>
   );
 }
