@@ -9,13 +9,11 @@ export async function GET() {
   } catch (error) {
     console.error('Error reading invoices:', error);
 
-    // 🆕 রেট লিমিট এরর হ্যান্ডলিং
     if (error.message.includes('Quota exceeded')) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            'Too many requests. Please wait a moment and refresh the page.',
+          error: 'Too many requests. Please wait a moment.',
           quotaExceeded: true,
         },
         { status: 429 },
@@ -41,7 +39,7 @@ export async function POST(request) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Write quota exceeded. Please wait a moment and try again.',
+          error: 'Write quota exceeded. Please wait a moment.',
           quotaExceeded: true,
         },
         { status: 429 },
