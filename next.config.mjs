@@ -1,13 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    remotePatterns: [{ protocol: 'https', hostname: '**' }],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
   },
-  // ⭐️ গুরুত্বপূর্ণ: static export বন্ধ রাখুন
-  output: 'standalone',
-  // ⭐️ Prerendering এর জন্য
+  // ⚠️ experimental.turbo সঠিক ফরম্যাটে
   experimental: {
-    // Turbopack এর জন্য
+    turbo: {
+      // কোনো alias থাকলে এখানে দিন
+    },
   },
 };
 
