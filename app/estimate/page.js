@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import EstimatePDF from '@/components/EstimatePDF';
 import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
 
-export default function CreateEstimatePage() {
+// 🆕 useSearchParams ব্যবহার করে আলাদা কম্পোনেন্ট
+function EstimateFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -32,7 +33,6 @@ export default function CreateEstimatePage() {
 
   const [nextItemId, setNextItemId] = useState(2);
 
-  // ডেটা সেটআপ
   useEffect(() => {
     const cookies = document.cookie.split(';').reduce((acc, cookie) => {
       const [key, value] = cookie.trim().split('=');
@@ -187,7 +187,6 @@ export default function CreateEstimatePage() {
     setSaving(false);
   };
 
-  // 🆕 Convert to Invoice - ইনভয়েস ফর্মে লোড হবে (taxRate সহ)
   const handleConvertToInvoice = () => {
     if (!formData.clientName.trim()) {
       setMessage('❌ Client name is required!');
@@ -208,7 +207,6 @@ export default function CreateEstimatePage() {
       .padStart(3, '0');
     const invoiceNo = `MHINV${year}${random}`;
 
-    // ইনভয়েস ফর্মে পাঠানোর জন্য ডেটা তৈরি (taxRate সহ)
     const invoiceData = {
       invoiceNo: invoiceNo,
       clientName: formData.clientName,
@@ -221,15 +219,14 @@ export default function CreateEstimatePage() {
           .toISOString()
           .split('T')[0],
       paymentMethod: 'Virement',
-      items: formData.items, // Object আকারে
-      taxRate: formData.taxRate, // 🆕 ট্যাক্স রেট যোগ
+      items: formData.items,
+      taxRate: formData.taxRate,
       totalHT: totals.subtotal.toFixed(2),
       tva: totals.taxAmount.toFixed(2),
       totalTTC: totals.total.toFixed(2),
       status: 'Pending',
     };
 
-    // 🔥 ইনভয়েস ফর্মে ডেটা পাঠানো (URL এনকোড করে)
     const encodedData = encodeURIComponent(JSON.stringify(invoiceData));
     router.push(`/invoice?data=${encodedData}`);
   };
@@ -278,7 +275,6 @@ export default function CreateEstimatePage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Header Info */}
           <div className="bg-[#1E293B] p-6 rounded-2xl border border-[#2D3B4E]">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -321,7 +317,6 @@ export default function CreateEstimatePage() {
             </div>
           </div>
 
-          {/* Client Info */}
           <div className="bg-[#1E293B] p-6 rounded-2xl border border-[#2D3B4E]">
             <h3 className="text-lg font-semibold text-white mb-4">
               👤 Client Information
@@ -379,7 +374,6 @@ export default function CreateEstimatePage() {
             </div>
           </div>
 
-          {/* Items */}
           <div className="bg-[#1E293B] p-6 rounded-2xl border border-[#2D3B4E]">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-white">🛒 Items</h3>
@@ -496,7 +490,6 @@ export default function CreateEstimatePage() {
             </div>
           </div>
 
-          {/* Totals + Additional */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-[#1E293B] p-6 rounded-2xl border border-[#2D3B4E]">
               <h3 className="text-lg font-semibold text-white mb-4">
@@ -573,7 +566,6 @@ export default function CreateEstimatePage() {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex flex-wrap gap-4 pt-4">
             <button
               type="submit"
@@ -604,7 +596,6 @@ export default function CreateEstimatePage() {
           </div>
         </form>
 
-        {/* PDF Preview Modal */}
         {showPreview && (
           <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
             <div className="bg-[#1E293B] rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-[#2D3B4E]">
@@ -627,5 +618,14 @@ export default function CreateEstimatePage() {
         )}
       </div>
     </div>
+  );
+}
+
+// 🔥 মূল পেজ: Suspense দিয়ে র‍্যাপ
+export default function CreateEstimatePage() {
+  return (
+    <Suspense fallback={<LoadingSpinner message="Loading page..." />}>
+      <EstimateFormContent />
+    </Suspense>
   );
 }

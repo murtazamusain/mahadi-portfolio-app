@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import InvoiceFormV2 from '@/components/InvoiceFormV2';
 
-export default function NewInvoicePage() {
+// 🆕 useSearchParams ব্যবহার করে আলাদা কম্পোনেন্ট
+function InvoiceContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -24,7 +25,6 @@ export default function NewInvoicePage() {
       router.push('/login');
     }
 
-    // 🆕 URL থেকে ডেটা পড়া (Convert to Invoice থেকে আসা)
     const dataParam = searchParams.get('data');
     if (dataParam) {
       try {
@@ -90,5 +90,20 @@ export default function NewInvoicePage() {
         />
       </div>
     </div>
+  );
+}
+
+// 🔥 মূল পেজ: Suspense দিয়ে র‍্যাপ
+export default function NewInvoicePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0F172A] flex items-center justify-center text-[#94A3B8]">
+          Loading...
+        </div>
+      }
+    >
+      <InvoiceContent />
+    </Suspense>
   );
 }
