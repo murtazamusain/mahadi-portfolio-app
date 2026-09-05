@@ -2,15 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import InvoicePDFV2 from './InvoicePDFV2';
-import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
-
-// সিগনেচার লোকাল স্টোরেজ থেকে লোড
-const getSignature = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('mahadi_signature') || null;
-  }
-  return null;
-};
+import { PDFDownloadLink, PDFViewer, pdf } from '@react-pdf/renderer';
 
 export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
   const [formData, setFormData] = useState({
@@ -30,10 +22,15 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
   const [message, setMessage] = useState('');
   const [errors, setErrors] = useState({});
   const [showPreview, setShowPreview] = useState(false);
-  const [signatureImage, setSignatureImage] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    setSignatureImage(getSignature());
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   // অটো ইনভয়েস নম্বর
@@ -67,7 +64,6 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
     }
   }, [initialData]);
 
-  // ভ্যালিডেশন
   const validateForm = () => {
     const newErrors = {};
     if (!formData.clientName.trim())
@@ -84,7 +80,6 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  // আইটেম ফাংশন
   const addItem = () => {
     const newId =
       formData.items.length > 0
@@ -116,7 +111,6 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
     });
   };
 
-  // টোটাল
   const calculateTotals = () => {
     let totalHT = 0;
     formData.items.forEach(item => {
@@ -132,7 +126,23 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
 
   const totals = calculateTotals();
 
-  // সাবমিট
+  const handleMobilePreview = async () => {
+    if (!validateForm()) {
+      setMessage('❌ Please fill all required fields before preview.');
+      return;
+    }
+    try {
+      const blob = await pdf(
+        <InvoicePDFV2 formData={formData} totals={totals} />,
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('PDF Preview error:', error);
+      setMessage('❌ Failed to generate PDF preview');
+    }
+  };
+
   const handleSubmit = async e => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -179,25 +189,36 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
   };
 
   return (
-    <div className="bg-[#1E293B] p-6 rounded-2xl border border-[#2D3B4E]">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-white">
+    <div className="bg-[#1E293B] p-3 sm:p-4 md:p-6 rounded-2xl border border-[#2D3B4E]">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
+        <h2 className="text-base sm:text-lg md:text-xl font-bold text-white">
           {isEditing ? '✏️ Edit Invoice' : '📄 Create French Invoice'}
         </h2>
-        <button
-          type="button"
-          onClick={() => setShowPreview(!showPreview)}
-          className="px-4 py-2 rounded-xl bg-[#3B82F6] text-white hover:bg-[#2563EB] transition text-sm"
-        >
-          {showPreview ? '✕ Close Preview' : '👁️ Preview PDF'}
-        </button>
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={handleMobilePreview}
+            className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#3B82F6] text-white hover:bg-[#2563EB] transition text-xs sm:text-sm"
+          >
+            👁️ Preview
+          </button>
+          {!isMobile && (
+            <button
+              type="button"
+              onClick={() => setShowPreview(!showPreview)}
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#8B5CF6] text-white hover:bg-[#7C3AED] transition text-xs sm:text-sm"
+            >
+              {showPreview ? '✕ Close' : '📄 Full'}
+            </button>
+          )}
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Header */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        {/* Header - ৩ কলাম */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           <div>
-            <label className="block text-sm font-medium text-[#94A3B8] mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-[#94A3B8] mb-1">
               Invoice No *
             </label>
             <input
@@ -206,14 +227,14 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
               onChange={e =>
                 setFormData({ ...formData, invoiceNo: e.target.value })
               }
-              className={`w-full bg-[#0F172A] border rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#3B82F6] transition ${errors.invoiceNo ? 'border-[#EF4444]' : 'border-[#2D3B4E]'}`}
+              className={`w-full bg-[#0F172A] border rounded-xl px-3 sm:px-4 py-2 text-white text-sm focus:outline-none focus:border-[#3B82F6] transition ${errors.invoiceNo ? 'border-[#EF4444]' : 'border-[#2D3B4E]'}`}
             />
             {errors.invoiceNo && (
               <p className="text-[#EF4444] text-xs mt-1">{errors.invoiceNo}</p>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#94A3B8] mb-1 flex items-center gap-2">
+            <label className="block text-xs sm:text-sm font-medium text-[#94A3B8] mb-1 flex items-center gap-2">
               <svg
                 className="w-4 h-4 text-[#F8FAFC]"
                 fill="none"
@@ -233,11 +254,11 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
               type="date"
               value={formData.date}
               onChange={e => setFormData({ ...formData, date: e.target.value })}
-              className="w-full bg-[#0F172A] border border-[#2D3B4E] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#3B82F6] transition"
+              className="w-full bg-[#0F172A] border border-[#2D3B4E] rounded-xl px-3 sm:px-4 py-2 text-white text-sm focus:outline-none focus:border-[#3B82F6] transition"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#94A3B8] mb-1 flex items-center gap-2">
+            <label className="block text-xs sm:text-sm font-medium text-[#94A3B8] mb-1 flex items-center gap-2">
               <svg
                 className="w-4 h-4 text-[#F8FAFC]"
                 fill="none"
@@ -259,19 +280,19 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
               onChange={e =>
                 setFormData({ ...formData, dueDate: e.target.value })
               }
-              className="w-full bg-[#0F172A] border border-[#2D3B4E] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#3B82F6] transition"
+              className="w-full bg-[#0F172A] border border-[#2D3B4E] rounded-xl px-3 sm:px-4 py-2 text-white text-sm focus:outline-none focus:border-[#3B82F6] transition"
             />
           </div>
         </div>
 
-        {/* Client */}
-        <div className="border-t border-[#2D3B4E] pt-4">
-          <h3 className="text-lg font-semibold text-white mb-4">
+        {/* Client Info */}
+        <div className="border-t border-[#2D3B4E] pt-3 sm:pt-4">
+          <h3 className="text-sm sm:text-base md:text-lg font-semibold text-white mb-3">
             👤 Facture à
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#94A3B8] mb-1">
+              <label className="block text-xs sm:text-sm font-medium text-[#94A3B8] mb-1">
                 Company / Full Name *
               </label>
               <input
@@ -280,7 +301,7 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
                 onChange={e =>
                   setFormData({ ...formData, clientName: e.target.value })
                 }
-                className={`w-full bg-[#0F172A] border rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#3B82F6] transition ${errors.clientName ? 'border-[#EF4444]' : 'border-[#2D3B4E]'}`}
+                className={`w-full bg-[#0F172A] border rounded-xl px-3 sm:px-4 py-2 text-white text-sm focus:outline-none focus:border-[#3B82F6] transition ${errors.clientName ? 'border-[#EF4444]' : 'border-[#2D3B4E]'}`}
               />
               {errors.clientName && (
                 <p className="text-[#EF4444] text-xs mt-1">
@@ -289,7 +310,7 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#94A3B8] mb-1">
+              <label className="block text-xs sm:text-sm font-medium text-[#94A3B8] mb-1">
                 Address *
               </label>
               <input
@@ -298,7 +319,7 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
                 onChange={e =>
                   setFormData({ ...formData, clientAddress: e.target.value })
                 }
-                className={`w-full bg-[#0F172A] border rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#3B82F6] transition ${errors.clientAddress ? 'border-[#EF4444]' : 'border-[#2D3B4E]'}`}
+                className={`w-full bg-[#0F172A] border rounded-xl px-3 sm:px-4 py-2 text-white text-sm focus:outline-none focus:border-[#3B82F6] transition ${errors.clientAddress ? 'border-[#EF4444]' : 'border-[#2D3B4E]'}`}
               />
               {errors.clientAddress && (
                 <p className="text-[#EF4444] text-xs mt-1">
@@ -307,7 +328,7 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#94A3B8] mb-1">
+              <label className="block text-xs sm:text-sm font-medium text-[#94A3B8] mb-1">
                 SIRET / VAT
               </label>
               <input
@@ -316,12 +337,12 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
                 onChange={e =>
                   setFormData({ ...formData, clientSiret: e.target.value })
                 }
-                className="w-full bg-[#0F172A] border border-[#2D3B4E] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#3B82F6] transition"
+                className="w-full bg-[#0F172A] border border-[#2D3B4E] rounded-xl px-3 sm:px-4 py-2 text-white text-sm focus:outline-none focus:border-[#3B82F6] transition"
               />
             </div>
           </div>
           <div className="mt-3">
-            <label className="block text-sm font-medium text-[#94A3B8] mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-[#94A3B8] mb-1">
               Mode de paiement
             </label>
             <select
@@ -329,7 +350,7 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
               onChange={e =>
                 setFormData({ ...formData, paymentMethod: e.target.value })
               }
-              className="w-full md:w-1/3 bg-[#0F172A] border border-[#2D3B4E] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#3B82F6] transition"
+              className="w-full sm:w-1/2 md:w-1/3 bg-[#0F172A] border border-[#2D3B4E] rounded-xl px-3 sm:px-4 py-2 text-white text-sm focus:outline-none focus:border-[#3B82F6] transition"
             >
               <option value="Virement">💳 Virement</option>
               <option value="Carte">💳 Carte Bancaire</option>
@@ -339,22 +360,131 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
         </div>
 
         {/* Items */}
-        <div className="border-t border-[#2D3B4E] pt-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-white">🛒 Items *</h3>
+        <div className="border-t border-[#2D3B4E] pt-3 sm:pt-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+            <h3 className="text-sm sm:text-base md:text-lg font-semibold text-white">
+              🛒 Items *
+            </h3>
             <button
               type="button"
               onClick={addItem}
-              className="px-4 py-2 rounded-xl bg-[#3B82F6] text-white hover:bg-[#2563EB] transition text-sm flex items-center gap-1"
+              className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#3B82F6] text-white hover:bg-[#2563EB] transition text-xs sm:text-sm flex items-center justify-center gap-1"
             >
-              <span className="text-lg">+</span> Add Line
+              <span className="text-base sm:text-lg">+</span> Add Line
             </button>
           </div>
           {errors.items && (
             <p className="text-[#EF4444] text-xs mb-2">{errors.items}</p>
           )}
 
-          <div className="overflow-x-auto">
+          {/* মোবাইলের জন্য স্ট্যাকড ভিউ */}
+          <div className="block sm:hidden space-y-3">
+            {formData.items.map((item, index) => {
+              const lineTotal =
+                (item.quantity || 0) *
+                (item.price || 0) *
+                (1 - (item.discount || 0) / 100);
+              return (
+                <div
+                  key={item.id}
+                  className="bg-[#0F172A] p-3 rounded-xl border border-[#2D3B4E]"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[#64748B] text-xs">
+                      Item #{index + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.id)}
+                      className="text-[#64748B] hover:text-[#EF4444] transition text-sm disabled:opacity-30"
+                      disabled={formData.items.length === 1}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-[#94A3B8] text-xs">
+                        Description
+                      </label>
+                      <input
+                        type="text"
+                        value={item.description}
+                        onChange={e =>
+                          updateItem(item.id, 'description', e.target.value)
+                        }
+                        className="w-full bg-[#0F172A] border border-[#2D3B4E] rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:border-[#3B82F6] transition"
+                        placeholder="Description"
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-[#94A3B8] text-xs">Qty</label>
+                        <input
+                          type="number"
+                          value={item.quantity}
+                          onChange={e =>
+                            updateItem(
+                              item.id,
+                              'quantity',
+                              parseFloat(e.target.value) || 0,
+                            )
+                          }
+                          className="w-full bg-[#0F172A] border border-[#2D3B4E] rounded-lg px-2 py-1 text-white text-sm text-center focus:outline-none focus:border-[#3B82F6] transition"
+                          min="0"
+                          step="1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[#94A3B8] text-xs">Price</label>
+                        <input
+                          type="number"
+                          value={item.price}
+                          onChange={e =>
+                            updateItem(
+                              item.id,
+                              'price',
+                              parseFloat(e.target.value) || 0,
+                            )
+                          }
+                          className="w-full bg-[#0F172A] border border-[#2D3B4E] rounded-lg px-2 py-1 text-white text-sm text-right focus:outline-none focus:border-[#3B82F6] transition"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[#94A3B8] text-xs">Disc %</label>
+                        <input
+                          type="number"
+                          value={item.discount}
+                          onChange={e =>
+                            updateItem(
+                              item.id,
+                              'discount',
+                              parseFloat(e.target.value) || 0,
+                            )
+                          }
+                          className="w-full bg-[#0F172A] border border-[#2D3B4E] rounded-lg px-2 py-1 text-white text-sm text-center focus:outline-none focus:border-[#3B82F6] transition"
+                          min="0"
+                          max="100"
+                          step="1"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#94A3B8]">Total:</span>
+                      <span className="text-[#10B981] font-mono">
+                        {lineTotal.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ডেস্কটপের জন্য টেবিল */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-[#94A3B8] border-b border-[#2D3B4E]">
@@ -456,27 +586,27 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
         </div>
 
         {/* Totals */}
-        <div className="border-t border-[#2D3B4E] pt-4 flex flex-col items-end">
-          <div className="w-full md:w-1/2 space-y-2 text-sm">
-            <div className="flex justify-between border-b border-[#2D3B4E] py-2">
+        <div className="border-t border-[#2D3B4E] pt-3 sm:pt-4 flex flex-col items-end">
+          <div className="w-full sm:w-1/2 md:w-2/5 space-y-1 sm:space-y-2 text-xs sm:text-sm">
+            <div className="flex justify-between border-b border-[#2D3B4E] py-1 sm:py-2">
               <span className="text-[#94A3B8]">TOTAL H.T.</span>
               <span className="text-white font-mono">
                 {totals.totalHT.toFixed(2)} €
               </span>
             </div>
-            <div className="flex justify-between border-b border-[#2D3B4E] py-2">
+            <div className="flex justify-between border-b border-[#2D3B4E] py-1 sm:py-2">
               <span className="text-[#94A3B8]">TVA (10%)</span>
               <span className="text-white font-mono">
                 {totals.tva.toFixed(2)} €
               </span>
             </div>
-            <div className="flex justify-between border-b border-[#2D3B4E] py-2 text-lg font-bold">
+            <div className="flex justify-between border-b border-[#2D3B4E] py-1 sm:py-2 text-sm sm:text-base md:text-lg font-bold">
               <span className="text-white">MONTANT TOTAL (TTC)</span>
               <span className="text-[#3B82F6]">
                 {totals.totalTTC.toFixed(2)} €
               </span>
             </div>
-            <div className="flex justify-between py-2 text-lg font-bold bg-[#0F172A] px-4 rounded-xl">
+            <div className="flex justify-between py-1 sm:py-2 text-sm sm:text-base md:text-lg font-bold bg-[#0F172A] px-3 sm:px-4 rounded-xl">
               <span className="text-white">TOTAL À PAYER</span>
               <span className="text-[#10B981]">
                 {totals.totalTTC.toFixed(2)} €
@@ -486,11 +616,11 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
         </div>
 
         {/* Actions */}
-        <div className="flex flex-wrap gap-3 pt-4 border-t border-[#2D3B4E]">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-[#2D3B4E]">
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2.5 rounded-xl bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] transition disabled:opacity-50 shadow-lg shadow-blue-500/25"
+            className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] transition disabled:opacity-50 shadow-lg shadow-blue-500/25 text-sm"
           >
             {loading
               ? 'Saving...'
@@ -499,15 +629,15 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
                 : '💾 Save Invoice'}
           </button>
           <PDFDownloadLink
-            document={
-              <InvoicePDFV2
-                formData={formData}
-                totals={totals}
-                signatureImage={signatureImage}
-              />
-            }
+            document={<InvoicePDFV2 formData={formData} totals={totals} />}
             fileName={`Invoice-${formData.invoiceNo}.pdf`}
-            className={`px-6 py-2.5 rounded-xl bg-[#10B981] text-white font-semibold hover:bg-[#059669] transition text-center shadow-lg shadow-green-500/25 ${!formData.clientName || !formData.clientAddress || !formData.items.some(i => i.description && i.price > 0) ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl bg-[#10B981] text-white font-semibold hover:bg-[#059669] transition text-center shadow-lg shadow-green-500/25 text-sm ${
+              !formData.clientName ||
+              !formData.clientAddress ||
+              !formData.items.some(i => i.description && i.price > 0)
+                ? 'opacity-50 pointer-events-none'
+                : ''
+            }`}
           >
             {({ loading: pdfLoading }) =>
               pdfLoading ? 'Generating PDF...' : '📄 Download PDF'
@@ -517,33 +647,35 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
 
         {message && (
           <div
-            className={`p-4 rounded-xl text-center ${message.includes('✅') ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30' : 'bg-[#EF4444]/20 text-[#EF4444] border border-[#EF4444]/30'}`}
+            className={`p-3 sm:p-4 rounded-xl text-center text-sm ${
+              message.includes('✅')
+                ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30'
+                : 'bg-[#EF4444]/20 text-[#EF4444] border border-[#EF4444]/30'
+            }`}
           >
             {message}
           </div>
         )}
       </form>
 
-      {/* PDF Preview Modal */}
-      {showPreview && (
+      {/* ডেস্কটপের জন্য PDF Preview Modal */}
+      {showPreview && !isMobile && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className="bg-[#1E293B] rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-[#2D3B4E]">
-            <div className="flex justify-between items-center p-4 border-b border-[#2D3B4E]">
-              <h3 className="text-lg font-bold text-white">📄 PDF Preview</h3>
+            <div className="flex justify-between items-center p-3 sm:p-4 border-b border-[#2D3B4E]">
+              <h3 className="text-sm sm:text-base md:text-lg font-bold text-white">
+                📄 PDF Preview
+              </h3>
               <button
                 onClick={() => setShowPreview(false)}
-                className="text-[#94A3B8] hover:text-white transition text-2xl"
+                className="text-[#94A3B8] hover:text-white transition text-xl sm:text-2xl"
               >
                 ✕
               </button>
             </div>
-            <div className="p-4 h-[70vh]">
+            <div className="p-2 sm:p-4 h-[60vh] sm:h-[70vh]">
               <PDFViewer width="100%" height="100%">
-                <InvoicePDFV2
-                  formData={formData}
-                  totals={totals}
-                  signatureImage={signatureImage}
-                />
+                <InvoicePDFV2 formData={formData} totals={totals} />
               </PDFViewer>
             </div>
           </div>
