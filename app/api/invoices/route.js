@@ -1,21 +1,27 @@
-import { getSheetsClient, getActiveSheetId } from '@/lib/googleSheets';
+// app/api/invoices/route.js
+import { getInvoices, addInvoice } from '@/lib/googleSheets';
 import { NextResponse } from 'next/server';
 
-// GET: সব ইনভয়েস পড়া
 export async function GET() {
   try {
-    const sheets = await getSheetsClient();
-    const sheetId = await getActiveSheetId();
-
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: sheetId,
-      range: 'Invoices!A1:M',
-    });
-
-    const rows = response.data.values || [];
-    return NextResponse.json({ success: true, data: rows });
+    const data = await getInvoices();
+    return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('Error reading invoices:', error);
+
+    // 🆕 রেট লিমিট এরর হ্যান্ডলিং
+    if (error.message.includes('Quota exceeded')) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Too many requests. Please wait a moment and refresh the page.',
+          quotaExceeded: true,
+        },
+        { status: 429 },
+      );
+    }
+
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 },
@@ -23,39 +29,25 @@ export async function GET() {
   }
 }
 
-// POST: নতুন ইনভয়েস সেভ
 export async function POST(request) {
   try {
     const data = await request.json();
-    const sheets = await getSheetsClient();
-    const sheetId = await getActiveSheetId();
-
-    const row = [
-      data.invoiceNo,
-      data.clientName,
-      data.clientAddress,
-      data.clientSiret || '',
-      data.date,
-      data.dueDate,
-      data.paymentMethod,
-      data.items,
-      data.totalHT,
-      data.tva,
-      data.totalTTC,
-      data.status || 'Pending',
-      new Date().toISOString(),
-    ];
-
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: sheetId,
-      range: 'Invoices!A1',
-      valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [row] },
-    });
-
-    return NextResponse.json({ success: true });
+    const result = await addInvoice(data);
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
     console.error('Error saving invoice:', error);
+
+    if (error.message.includes('Quota exceeded')) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Write quota exceeded. Please wait a moment and try again.',
+          quotaExceeded: true,
+        },
+        { status: 429 },
+      );
+    }
+
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 },

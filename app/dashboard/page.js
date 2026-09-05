@@ -92,21 +92,24 @@ export default function DashboardPage() {
   // 📥 লোড
   const loadData = async () => {
     try {
-      const contentRes = await fetch('/api/content');
+      // সব ডেটা সমান্তরালে লোড (একসাথে অনেক কল না করে)
+      const [contentRes, configRes] = await Promise.all([
+        fetch('/api/content'),
+        fetch('/api/admin/config'),
+      ]);
+
       const contentData = await contentRes.json();
+      const configData = await configRes.json();
+
       if (contentData.success) {
         const rows = contentData.data || [];
         const contentObj = {};
         rows.slice(1).forEach(row => {
           if (row[1]) contentObj[row[1]] = row[2] || '';
         });
-        if (Object.keys(contentObj).length > 0) {
-          setContent(prev => ({ ...prev, ...contentObj }));
-        }
+        setContent(prev => ({ ...prev, ...contentObj }));
       }
 
-      const configRes = await fetch('/api/admin/config');
-      const configData = await configRes.json();
       if (configData.success) {
         setConfig(configData.data);
       }

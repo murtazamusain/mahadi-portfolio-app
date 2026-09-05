@@ -101,17 +101,11 @@ export default function InvoicesPage() {
     }
   };
 
-  // স্ট্যাটাস কাউন্ট
   const statusCounts = invoices.reduce((acc, inv) => {
     const status = inv[11] || 'Pending';
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {});
-
-  // 🆕 ফিল্টার ফাংশন
-  const handleStatusClick = status => {
-    setFilterStatus(status);
-  };
 
   const filteredInvoices = invoices.filter(inv => {
     const invNo = inv[0] || '';
@@ -170,22 +164,24 @@ export default function InvoicesPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0F172A] py-6 md:py-10">
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-[#0F172A] py-4 md:py-10">
+      <div className="container mx-auto px-3 sm:px-4">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white">
               📄 Invoice Directory
             </h1>
-            <p className="text-[#94A3B8] text-sm">Manage all your invoices</p>
+            <p className="text-[#94A3B8] text-xs md:text-sm">
+              Manage all your invoices
+            </p>
           </div>
           <Link
             href="/invoice"
-            className="px-6 py-3 rounded-xl bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] transition shadow-lg shadow-blue-500/25 flex items-center gap-2"
+            className="w-full sm:w-auto px-4 md:px-6 py-2 md:py-3 rounded-xl bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] transition shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 text-sm md:text-base"
           >
             <svg
-              className="w-5 h-5"
+              className="w-4 h-4 md:w-5 md:h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -201,26 +197,30 @@ export default function InvoicesPage() {
           </Link>
         </div>
 
-        {/* 🆕 স্ট্যাটস কার্ড - টাইটেলের পাশে নাম্বার + ক্লিকেবল */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        {/* 🆕 মোবাইল রেস্পন্সিভ স্ট্যাটস কার্ড */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4 md:mb-6">
           {statusConfig.map(item => (
             <button
               key={item.key}
-              onClick={() => handleStatusClick(item.key)}
-              className={`bg-[#1E293B] p-4 rounded-xl border transition-all duration-300 ${
+              onClick={() => setFilterStatus(item.key)}
+              className={`bg-[#1E293B] p-2 sm:p-3 rounded-xl border transition-all duration-300 ${
                 filterStatus === item.key
                   ? `border-[#3B82F6] shadow-lg shadow-blue-500/10`
                   : item.bg
               } hover:border-[#3B82F6] hover:shadow-lg hover:shadow-blue-500/10 text-left`}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {item.icon && <span>{item.icon}</span>}
-                  <span className={`text-sm font-medium ${item.color}`}>
+                <div className="flex items-center gap-1">
+                  {item.icon && (
+                    <span className="text-xs sm:text-sm">{item.icon}</span>
+                  )}
+                  <span
+                    className={`text-[10px] sm:text-xs font-medium ${item.color}`}
+                  >
                     {item.label}
                   </span>
                 </div>
-                <span className={`text-xl font-bold ${item.color}`}>
+                <span className={`text-sm sm:text-lg font-bold ${item.color}`}>
                   {item.count}
                 </span>
               </div>
@@ -228,12 +228,12 @@ export default function InvoicesPage() {
           ))}
         </div>
 
-        {/* Search & Filter */}
-        <div className="bg-[#1E293B] p-4 rounded-2xl border border-[#2D3B4E] mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
+        {/* Search & Filter - মোবাইল রেস্পন্সিভ */}
+        <div className="bg-[#1E293B] p-3 sm:p-4 rounded-2xl border border-[#2D3B4E] mb-4 md:mb-6">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <div className="flex-1 relative">
               <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-[#64748B]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -250,30 +250,43 @@ export default function InvoicesPage() {
                 placeholder="Search by invoice or client..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full bg-[#0F172A] border border-[#2D3B4E] rounded-xl pl-10 pr-4 py-2.5 text-white placeholder:text-[#64748B] focus:outline-none focus:border-[#3B82F6] transition"
+                className="w-full bg-[#0F172A] border border-[#2D3B4E] rounded-xl pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-white placeholder:text-[#64748B] text-xs sm:text-sm focus:outline-none focus:border-[#3B82F6] transition"
               />
             </div>
 
-            <div className="relative">
-              <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#F8FAFC]"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <div className="flex gap-2">
+              <select
+                value={filterStatus}
+                onChange={e => setFilterStatus(e.target.value)}
+                className="flex-1 sm:flex-none bg-[#0F172A] border border-[#2D3B4E] rounded-xl px-2 sm:px-4 py-2 text-white text-xs sm:text-sm focus:outline-none focus:border-[#3B82F6] transition"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                <option value="all">All</option>
+                <option value="Paid">✅ Paid</option>
+                <option value="Pending">⏳ Pending</option>
+                <option value="Overdue">⚠️ Overdue</option>
+              </select>
+
+              <div className="relative flex-1 sm:flex-none">
+                <svg
+                  className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 text-[#F8FAFC]"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                <input
+                  type="date"
+                  value={filterDate}
+                  onChange={e => setFilterDate(e.target.value)}
+                  className="w-full bg-[#0F172A] border border-[#2D3B4E] rounded-xl pl-7 sm:pl-10 pr-2 sm:pr-4 py-2 text-white text-xs sm:text-sm focus:outline-none focus:border-[#3B82F6] transition"
                 />
-              </svg>
-              <input
-                type="date"
-                value={filterDate}
-                onChange={e => setFilterDate(e.target.value)}
-                className="bg-[#0F172A] border border-[#2D3B4E] rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-[#3B82F6] transition"
-              />
+              </div>
             </div>
 
             {(filterStatus !== 'all' || filterDate || searchTerm) && (
@@ -283,19 +296,19 @@ export default function InvoicesPage() {
                   setFilterStatus('all');
                   setFilterDate('');
                 }}
-                className="px-4 py-2.5 rounded-xl bg-[#EF4444]/20 text-[#EF4444] hover:bg-[#EF4444]/30 transition text-sm"
+                className="px-3 sm:px-4 py-2 rounded-xl bg-[#EF4444]/20 text-[#EF4444] hover:bg-[#EF4444]/30 transition text-xs sm:text-sm whitespace-nowrap"
               >
-                Clear Filters
+                Clear
               </button>
             )}
           </div>
         </div>
 
-        {/* Invoice Grid */}
+        {/* Invoice Grid - মোবাইল রেস্পন্সিভ */}
         {filteredInvoices.length === 0 ? (
-          <div className="text-center py-16 bg-[#1E293B] rounded-2xl border border-[#2D3B4E]">
-            <div className="text-6xl mb-4">📭</div>
-            <p className="text-[#94A3B8]">
+          <div className="text-center py-12 sm:py-16 bg-[#1E293B] rounded-2xl border border-[#2D3B4E]">
+            <div className="text-5xl sm:text-6xl mb-3 sm:mb-4">📭</div>
+            <p className="text-[#94A3B8] text-sm sm:text-base px-4">
               {searchTerm || filterStatus !== 'all' || filterDate
                 ? 'No invoices match your filters.'
                 : 'No invoices yet. Create your first invoice!'}
@@ -303,14 +316,14 @@ export default function InvoicesPage() {
             {!searchTerm && filterStatus === 'all' && !filterDate && (
               <Link
                 href="/invoice"
-                className="inline-block mt-4 px-6 py-3 rounded-xl bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] transition"
+                className="inline-block mt-4 px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-[#3B82F6] text-white font-semibold hover:bg-[#2563EB] transition text-sm sm:text-base"
               >
                 + Create Invoice
               </Link>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
             {filteredInvoices.map((inv, index) => {
               const invNo = inv[0] || 'N/A';
               const clientName = inv[1] || 'Unknown';
@@ -341,17 +354,18 @@ export default function InvoicesPage() {
               return (
                 <div
                   key={index}
-                  className="bg-[#1E293B] p-5 rounded-2xl border border-[#2D3B4E] hover:border-[#3B82F6] transition-all duration-300 card-hover"
+                  className="bg-[#1E293B] p-3 sm:p-5 rounded-2xl border border-[#2D3B4E] hover:border-[#3B82F6] transition-all duration-300 card-hover"
                 >
-                  <div className="flex justify-between items-start mb-3">
-                    <span className="text-xs font-mono text-[#94A3B8] bg-[#0F172A] px-3 py-1 rounded-lg">
+                  {/* Header */}
+                  <div className="flex justify-between items-start mb-2 sm:mb-3">
+                    <span className="text-[10px] sm:text-xs font-mono text-[#94A3B8] bg-[#0F172A] px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg">
                       {invNo}
                     </span>
                     <select
                       value={status}
                       onChange={e => updateStatus(invNo, e.target.value)}
                       disabled={updating === invNo}
-                      className={`text-xs px-3 py-1 rounded-full border-0 focus:ring-1 focus:ring-[#3B82F6] ${statusColors[status] || statusColors.Pending} cursor-pointer transition`}
+                      className={`text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full border-0 focus:ring-1 focus:ring-[#3B82F6] ${statusColors[status] || statusColors.Pending} cursor-pointer transition`}
                     >
                       <option value="Pending">⏳ Pending</option>
                       <option value="Paid">✅ Paid</option>
@@ -359,13 +373,15 @@ export default function InvoicesPage() {
                     </select>
                   </div>
 
-                  <h3 className="text-lg font-semibold text-white mb-1">
+                  {/* Client */}
+                  <h3 className="text-sm sm:text-lg font-semibold text-white mb-0.5 sm:mb-1 truncate">
                     {clientName}
                   </h3>
 
-                  <div className="flex items-center gap-2 text-[#94A3B8] text-sm mb-2">
+                  {/* Date */}
+                  <div className="flex items-center gap-1.5 sm:gap-2 text-[#94A3B8] text-xs sm:text-sm mb-1 sm:mb-2">
                     <svg
-                      className="w-4 h-4 text-[#F8FAFC]"
+                      className="w-3 h-3 sm:w-4 sm:h-4 text-[#F8FAFC]"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -380,20 +396,22 @@ export default function InvoicesPage() {
                     <span>{date}</span>
                   </div>
 
-                  <p className="text-2xl font-bold text-[#3B82F6] mt-2">
+                  {/* Amount */}
+                  <p className="text-lg sm:text-2xl font-bold text-[#3B82F6] mt-1 sm:mt-2">
                     €{parseFloat(amount).toFixed(2)}
                   </p>
 
-                  <div className="flex gap-2 mt-4 pt-3 border-t border-[#2D3B4E]">
+                  {/* Actions */}
+                  <div className="flex gap-2 mt-2 sm:mt-4 pt-2 sm:pt-3 border-t border-[#2D3B4E]">
                     <Link
                       href={`/invoice/${invNo}/edit`}
-                      className="flex-1 bg-[#3B82F6] text-white px-3 py-1.5 rounded-xl hover:bg-[#2563EB] transition text-sm text-center"
+                      className="flex-1 bg-[#3B82F6] text-white px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl hover:bg-[#2563EB] transition text-[10px] sm:text-sm text-center"
                     >
                       ✏️ Edit
                     </Link>
                     <button
                       onClick={() => handleDelete(invNo)}
-                      className="flex-1 bg-[#EF4444]/20 text-[#EF4444] px-3 py-1.5 rounded-xl hover:bg-[#EF4444]/30 transition text-sm"
+                      className="flex-1 bg-[#EF4444]/20 text-[#EF4444] px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl hover:bg-[#EF4444]/30 transition text-[10px] sm:text-sm"
                     >
                       🗑️ Delete
                     </button>
