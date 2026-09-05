@@ -8,15 +8,10 @@ const nextConfig = {
       },
     ],
   },
-  // 🆕 static export বন্ধ করুন
   output: 'standalone',
-  // 🆕 Turbopack এর জন্য
+  // 🆕 Turbopack ও build এর জন্য
   experimental: {
-    turbo: {
-      resolveAlias: {
-        // কোনো alias থাকলে এখানে দিন
-      },
-    },
+    turbo: {},
   },
 };
 
