@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import InvoicePDFV2 from './InvoicePDFV2';
-import { PDFDownloadLink, PDFViewer, pdf } from '@react-pdf/renderer';
+import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
 
 export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
   const [formData, setFormData] = useState({
@@ -126,23 +126,6 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
 
   const totals = calculateTotals();
 
-  const handleMobilePreview = async () => {
-    if (!validateForm()) {
-      setMessage('❌ Please fill all required fields before preview.');
-      return;
-    }
-    try {
-      const blob = await pdf(
-        <InvoicePDFV2 formData={formData} totals={totals} />,
-      ).toBlob();
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-    } catch (error) {
-      console.error('PDF Preview error:', error);
-      setMessage('❌ Failed to generate PDF preview');
-    }
-  };
-
   const handleSubmit = async e => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -194,28 +177,20 @@ export default function InvoiceFormV2({ initialData, onSave, isEditing }) {
         <h2 className="text-base sm:text-lg md:text-xl font-bold text-white">
           {isEditing ? '✏️ Edit Invoice' : '📄 Create French Invoice'}
         </h2>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+        {/* 🆕 মোবাইলে Preview বাটন বন্ধ, ডেস্কটপে Full Preview */}
+        {!isMobile && (
           <button
             type="button"
-            onClick={handleMobilePreview}
-            className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#3B82F6] text-white hover:bg-[#2563EB] transition text-xs sm:text-sm"
+            onClick={() => setShowPreview(!showPreview)}
+            className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#8B5CF6] text-white hover:bg-[#7C3AED] transition text-xs sm:text-sm"
           >
-            👁️ Preview
+            {showPreview ? '✕ Close' : '📄 Full Preview'}
           </button>
-          {!isMobile && (
-            <button
-              type="button"
-              onClick={() => setShowPreview(!showPreview)}
-              className="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-[#8B5CF6] text-white hover:bg-[#7C3AED] transition text-xs sm:text-sm"
-            >
-              {showPreview ? '✕ Close' : '📄 Full'}
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-        {/* Header - ৩ কলাম */}
+        {/* Header */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           <div>
             <label className="block text-xs sm:text-sm font-medium text-[#94A3B8] mb-1">
